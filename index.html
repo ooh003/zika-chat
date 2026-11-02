@@ -393,6 +393,7 @@
     line-height: 1; transition: all 0.2s;
   }
   .plus-btn:active { background: var(--bg2); }
+  .plus-btn svg { width: 18px; height: 18px; }
   .plus-menu {
     display: none; background: #fff; border-top: 1px solid var(--border);
     padding: 16px; gap: 24px; flex-shrink: 0;
@@ -883,7 +884,7 @@
     </div>
     <div class="chat-input">
       <button class="plus-btn" onclick="togglePlusMenu()">+</button>
-      <button class="plus-btn" onclick="toggleStickerPanel()" title="表情包">☺</button>
+      <button class="plus-btn" onclick="toggleStickerPanel()" title="表情包"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="8.6" cy="10" r="1.4"/><path d="M4.2 16.4l4.4-4.1a2 2 0 0 1 2.7 0l4.6 4.1"/></svg></button>
       <textarea id="chat-input" placeholder="说点什么…" rows="1"></textarea>
       <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
     </div>
@@ -931,7 +932,7 @@
       </div>
 
       <div class="card-section">
-        <h3>😊 表情包 / 颜文字</h3>
+        <h3>表情包 / 颜文字</h3>
         <div class="import-hint">可添加颜文字，也可以上传图片表情包</div>
         <div class="input-row" style="align-items:flex-start;">
           <textarea id="new-sticker-input" class="sticker-input" rows="2" placeholder="每行一个颜文字，可批量添加&#10;例如 (๑•̀ㅂ•́)و✧"></textarea>
@@ -1128,6 +1129,10 @@
           <input type="checkbox" id="set-bg-notify" onchange="setBgNotify(this.checked)">
         </div>
         <div class="setting-row">
+          <label>通知测试</label>
+          <button onclick="testBackgroundNotify()" style="border:none;background:rgba(108,180,238,.14);color:var(--primary);font-family:inherit;font-size:12px;padding:6px 13px;border-radius:10px;cursor:pointer;">发送测试</button>
+        </div>
+        <div class="setting-row">
           <label>消息弹窗</label>
           <input type="checkbox" id="set-popup-notify" onchange="setPopupNotify(this.checked)">
         </div>
@@ -1140,7 +1145,7 @@
           <input type="checkbox" id="set-auto-moments" onchange="setAutoMoments(this.checked)">
         </div>
         <div class="setting-row" style="border-bottom:none;">
-          <div class="setting-desc">「对方主动发消息」按间隔从字卡库抽卡发来消息；「主动来电」「主动发朋友圈」会不定时触发。你自己发朋友圈后，梦角一定会回复，不受开关影响。</div>
+          <div class="setting-desc">「对方主动发消息」按间隔从字卡库抽卡发来消息；「主动来电」「主动发朋友圈」会不定时触发。你自己发朋友圈后，梦角一定会回复，不受开关影响。<br>后台通知：开启后，应用在后台被系统挂起时会在你返回时补发提醒；点「发送测试」可立即看到应用内弹窗和角标效果。</div>
         </div>
       </div>
 
@@ -1425,7 +1430,12 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem('zika_data', JSON.stringify(STORE));
+  try {
+    localStorage.setItem('zika_data', JSON.stringify(STORE));
+  } catch (e) {
+    console.error(e);
+    if (typeof toast === 'function') toast('存储空间不足，请换更小的图片');
+  }
 }
 
 // ============ Theme ============
@@ -1484,6 +1494,8 @@ function setPopupNotify(on) {
   saveData();
 }
 
+let pendingBgPopup = null;
+
 async function setBgNotify(on) {
   let allowed = false;
   if (on && 'Notification' in window) {
@@ -1492,11 +1504,65 @@ async function setBgNotify(on) {
       try { allowed = (await Notification.requestPermission()) === 'granted'; } catch (e) { allowed = false; }
     }
   }
-  STORE.settings.bgNotify = allowed;
+  STORE.settings.bgNotify = !!on;
   saveData();
   renderSettings();
-  if (on && !allowed) toast('浏览器未授权通知');
+  if (on && !allowed) toast('系统通知不可用，已改用应用内提醒');
 }
+
+async function testBackgroundNotify() {
+  const name = STORE.settings.name || '梦角';
+  // 应用内提醒始终显示，保证任何环境点“发送测试”都有可见反馈
+  showMsgPopup(name, '测试消息：这是一条应用内提醒');
+  let sys = false;
+  if ('Notification' in window) {
+    try {
+      let perm = Notification.permission;
+      if (perm === 'default') perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        try {
+          new Notification(name, { body: '测试通知：后台提醒已开启', tag: 'zika-test' });
+          sys = true;
+        } catch (e) { sys = false; }
+      }
+    } catch (e) { sys = false; }
+  }
+  if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
+  toast(sys ? '已发送系统通知，同时显示应用内提醒' : '系统通知不可用，已用应用内提醒代替');
+}
+
+// 页面在后台被系统挂起时定时器会被暂停，回到前台后补发错过的主动消息
+function catchUpAutoMsg() {
+  if (!STORE.settings.autoMsg) return;
+  if (!STORE.cards.length && !STORE.stickers.length) return;
+  const step = (Number(STORE.settings.autoInterval) || 5) * 60000;
+  let missed = Math.floor((Date.now() - lastAutoAt) / step);
+  if (missed < 1) return;
+  missed = Math.min(missed, 3);
+  let last = null;
+  for (let i = 0; i < missed; i++) {
+    const msg = makeHimReply();
+    if (!msg) break;
+    msg.time = Date.now();
+    STORE.chats.push(msg);
+    last = msg;
+  }
+  if (!last) return;
+  lastAutoAt = Date.now();
+  saveData();
+  renderChat();
+  updateDesktopBadges();
+  onIncomingMessage(last.stickerImage ? '发来一个表情' : (last.text || '发来一条消息'));
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (pendingBgPopup) {
+    showMsgPopup(pendingBgPopup.name, pendingBgPopup.text);
+    pendingBgPopup = null;
+  }
+  catchUpAutoMsg();
+});
 
 function showMsgPopup(name, text) {
   const app = document.querySelector('.app');
@@ -1512,11 +1578,18 @@ function showMsgPopup(name, text) {
 }
 
 function onIncomingMessage(text) {
+  const name = STORE.settings.name || '梦角';
   const chatActive = document.getElementById('chat-page').classList.contains('active');
-  if (STORE.settings.popupNotify && !chatActive) showMsgPopup(STORE.settings.name || '梦角', text);
-  if (STORE.settings.bgNotify && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification(STORE.settings.name || '梦角', { body: text, tag: 'zika-msg' }); } catch (e) {}
+  if (STORE.settings.popupNotify && !chatActive) showMsgPopup(name, text);
+  if (!STORE.settings.bgNotify) return;
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(name, { body: text, tag: 'zika-msg' });
+      return;
+    } catch (e) {}
   }
+  // 不支持系统通知时：记录待提醒，回到页面立即弹窗
+  if (document.hidden) pendingBgPopup = { name, text };
 }
 
 let lastAutoAt = Date.now();
@@ -1608,6 +1681,13 @@ function updateDesktopBadges() {
   set('badge-chat', unread);
   set('badge-cards', STORE.cards.length);
   set('badge-moments', STORE.moments.length);
+  // 已添加到桌面/PWA 时同步应用图标角标
+  if ('setAppBadge' in navigator) {
+    try {
+      const p = unread > 0 ? navigator.setAppBadge(unread) : navigator.clearAppBadge();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
 }
 
 function updateDesktopWidgets() {
@@ -1690,17 +1770,18 @@ function resetDesktopBgFromSettings() {
   toast('已恢复默认壁纸');
 }
 
-document.getElementById('desktop-bg-file2').addEventListener('change', (e) => {
+document.getElementById('desktop-bg-file2').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.desktopBg = ev.target.result;
+  try {
+    STORE.settings.desktopBg = await importImage(file, 900);
     saveData();
     applyDesktopBg();
     toast('桌面壁纸已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 function openDesktopBgModal() {
@@ -1715,18 +1796,19 @@ function clearDesktopBg() {
   toast('已恢复默认壁纸');
 }
 
-document.getElementById('desktop-bg-file').addEventListener('change', (e) => {
+document.getElementById('desktop-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.desktopBg = ev.target.result;
+  try {
+    STORE.settings.desktopBg = await importImage(file, 900);
     saveData();
     applyDesktopBg();
     closeModal('desktop-bg-modal');
     toast('壁纸已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 // ============ Desktop Widgets ============
@@ -1742,18 +1824,19 @@ function clearPhotoWidget() {
   toast('已移除照片');
 }
 
-document.getElementById('photo-widget-file').addEventListener('change', (e) => {
+document.getElementById('photo-widget-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.photoWidget = ev.target.result;
+  try {
+    STORE.settings.photoWidget = await importImage(file, 720);
     saveData();
     updateDesktopWidgets();
     closeModal('photo-widget-modal');
     toast('照片已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 function openCountdownModal() {
@@ -1862,57 +1945,102 @@ function resetPairAvatars() {
   toast('已恢复默认头像');
 }
 
-document.getElementById('pair-file-left').addEventListener('change', (e) => {
+document.getElementById('pair-file-left').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.pairLeft = ev.target.result;
+  try {
+    STORE.settings.pairLeft = await importImage(file, 320);
     saveData();
     renderPairWidget();
     toast('梦角头像已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
-document.getElementById('pair-file-right').addEventListener('change', (e) => {
+document.getElementById('pair-file-right').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.pairRight = ev.target.result;
+  try {
+    STORE.settings.pairRight = await importImage(file, 320);
     saveData();
     renderPairWidget();
     toast('我的头像已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
-document.getElementById('pair-bg-file').addEventListener('change', (e) => {
+document.getElementById('pair-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.pairBg = ev.target.result;
+  try {
+    STORE.settings.pairBg = await importImage(file, 800);
     saveData();
     applyPairBg();
     toast('卡片背景已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
-document.getElementById('cd-bg-file').addEventListener('change', (e) => {
+document.getElementById('cd-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.countdownBg = ev.target.result;
+  try {
+    STORE.settings.countdownBg = await importImage(file, 800);
     saveData();
     applyCountdownBg();
     toast('倒数日背景已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
+
+// 图片统一压缩导入：避免大图读取卡顿和 localStorage 超限
+function importImage(file, maxSize = 900, format = 'image/jpeg', quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      reject(new Error('not an image'));
+      return;
+    }
+    // 大图解码需要时间，先给用户一个即时反馈，避免“点了没反应”
+    if (file.size > 500 * 1024) toast('正在处理图片…');
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (format === 'image/jpeg') {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, w, h);
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(objectUrl);
+        resolve(canvas.toDataURL(format, quality));
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('decode failed'));
+    };
+    img.src = objectUrl;
+  });
+}
 
 // ============ Chat ============
 function renderChat() {
@@ -2305,18 +2433,19 @@ function clearChatBg() {
   toast('已恢复默认背景');
 }
 
-document.getElementById('bg-file').addEventListener('change', (e) => {
+document.getElementById('bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.chatBg = ev.target.result;
+  try {
+    STORE.settings.chatBg = await importImage(file, 1000);
     saveData();
     applyChatBg();
     closeModal('bg-modal');
     toast('背景已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 // ============ Moments Background ============
@@ -2359,19 +2488,21 @@ function clearMomentsBg() {
   toast('已恢复默认背景');
 }
 
-document.getElementById('moments-bg-file').addEventListener('change', (e) => {
+document.getElementById('moments-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    if (momentsBgTarget === 'him') STORE.settings.himMomentsBg = ev.target.result;
-    else STORE.settings.momentsBg = ev.target.result;
+  try {
+    const data = await importImage(file, 1000);
+    if (momentsBgTarget === 'him') STORE.settings.himMomentsBg = data;
+    else STORE.settings.momentsBg = data;
     saveData();
     applyMomentsBg();
     closeModal('moments-bg-modal');
     toast('朋友圈背景已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 function clearHimMomentsBg() {
@@ -2381,17 +2512,18 @@ function clearHimMomentsBg() {
   toast('已恢复默认背景');
 }
 
-document.getElementById('him-moments-bg-file').addEventListener('change', (e) => {
+document.getElementById('him-moments-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.himMomentsBg = ev.target.result;
+  try {
+    STORE.settings.himMomentsBg = await importImage(file, 1000);
     saveData();
     applyMomentsBg();
     toast('对方朋友圈背景已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 // ============ Call Background ============
@@ -2409,17 +2541,18 @@ function clearCallBg() {
   toast('来电背景已恢复默认');
 }
 
-document.getElementById('call-bg-file').addEventListener('change', (e) => {
+document.getElementById('call-bg-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.callBg = ev.target.result;
+  try {
+    STORE.settings.callBg = await importImage(file, 1000);
     saveData();
     applyCallBg();
     toast('来电背景已设置');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 // ============ Cards ============
@@ -2664,37 +2797,25 @@ function deleteSticker(i) {
   toast('已删除');
 }
 
-function shrinkImage(file, maxSize) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 document.getElementById('sticker-file').addEventListener('change', async (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
+  let added = 0;
   for (const file of files) {
-    const data = await shrinkImage(file, 160);
-    STORE.stickers.push({ type: 'img', data });
+    try {
+      const data = await importImage(file, 160, 'image/png');
+      STORE.stickers.push({ type: 'img', data });
+      added++;
+    } catch (err) { /* 跳过无法读取的文件 */ }
   }
   e.target.value = '';
-  saveData();
-  renderStickers();
-  toast(`已添加 ${files.length} 个表情`);
+  if (added) {
+    saveData();
+    renderStickers();
+    toast(`已添加 ${added} 个表情`);
+  } else {
+    toast('图片导入失败，请换一张再试');
+  }
 });
 
 // ============ Moments ============
@@ -2914,32 +3035,34 @@ document.getElementById('set-accent').addEventListener('input', (e) => {
   STORE.settings.accent = e.target.value;
   saveData(); applyTheme();
 });
-document.getElementById('avatar-file').addEventListener('change', (e) => {
+document.getElementById('avatar-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.avatar = ev.target.result;
+  try {
+    STORE.settings.avatar = await importImage(file, 320);
     saveData();
     renderSettings();
     renderPairWidget();
     toast('头像已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
-document.getElementById('myavatar-file').addEventListener('change', (e) => {
+document.getElementById('myavatar-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    STORE.settings.myavatar = ev.target.result;
+  try {
+    STORE.settings.myavatar = await importImage(file, 320);
     saveData();
     renderSettings();
     renderPairWidget();
     toast('我的头像已更新');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    toast('图片导入失败，请换一张再试');
+  }
+  e.target.value = '';
 });
 
 function clearChats() {
