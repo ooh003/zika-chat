@@ -470,35 +470,35 @@
     background: rgba(15, 23, 32, 0.05); border-radius: 11px;
     padding: 6px 13px; text-align: center; letter-spacing: 0.2px;
   }
-  .call-panel { position: relative; }
+  .modal.call-panel {
+    width: 292px; max-width: 86vw;
+  }
+  .call-panel {
+    position: relative;
+    width: 292px; max-width: 86vw;
+    background: rgba(255,255,255,0.97);
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 24px;
+    padding: 22px 20px 18px;
+    text-align: center;
+    color: var(--text);
+    box-shadow: 0 20px 56px rgba(20,30,45,0.24);
+    animation: popupIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
   #call-modal {
-    padding: 0; background-color: #0a0c10;
-    background-image: linear-gradient(165deg, #141821 0%, #080a0e 100%);
-    background-size: cover; background-position: center;
+    padding: 20px;
+    background: rgba(20,25,35,0.18);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   }
-  #call-modal::before {
-    content: ''; position: absolute; inset: 0; z-index: 0;
-    background: linear-gradient(170deg, rgba(8,10,14,0.45) 0%, rgba(8,10,14,0.82) 100%);
+  .call-panel .avatar {
+    width: 68px; height: 68px; font-size: 24px; margin: 2px auto 12px;
+    background: var(--bg2); color: var(--primary-dark);
   }
-  .call-panel-full {
-    position: relative; z-index: 1;
-    width: 100%; height: 100%; max-width: none; border-radius: 0;
-    background: transparent; color: #fff; padding: 40px 24px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .call-panel-full .avatar {
-    width: 96px; height: 96px; font-size: 32px; border: 2px solid rgba(255,255,255,0.6);
-    background: rgba(255,255,255,0.15); color: #fff; margin: 10px auto 20px;
-  }
-  .call-panel-full #call-name { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 6px; }
-  .call-panel-full #call-status { font-size: 13px; color: rgba(255,255,255,0.72); margin-bottom: 26px; }
-  .call-panel-full .modal-actions .btn { min-width: 88px; padding: 11px 22px; font-size: 14px; }
-  .call-panel-full .modal-actions .btn.danger { background: #ff5f5f; }
-  .call-panel-full .call-min-btn {
-    top: calc(18px + env(safe-area-inset-top)); right: 18px;
-    background: rgba(255,255,255,0.16); color: rgba(255,255,255,0.9);
-  }
-  .call-panel-full .modal-actions { gap: 16px; }
+  .call-panel #call-name { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .call-panel #call-status { font-size: 12.5px; color: var(--text-light); margin-bottom: 18px; }
+  .call-panel .modal-actions { gap: 12px; justify-content: center; }
+  .call-panel .modal-actions .btn { min-width: 92px; padding: 10px 18px; font-size: 14px; }
+  .call-panel .modal-actions .btn.danger { background: #ff5f5f; }
   .call-min-btn {
     position: absolute; top: 10px; right: 12px;
     background: rgba(15,23,32,0.06); border: none; cursor: pointer;
@@ -659,6 +659,11 @@
     background: var(--bg2); color: var(--primary);
     padding: 8px 14px; border-radius: var(--radius-sm);
     font-size: 12px; cursor: pointer;
+  }
+  /* 视觉隐藏但可点击，兼容 iOS 文件选择 */
+  .file-hidden {
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; overflow: hidden; left: 0; top: 0;
   }
 
   /* ============ Moments ============ */
@@ -940,7 +945,7 @@
         </div>
         <label class="btn secondary" style="width:100%;display:flex;justify-content:center;margin-top:8px;cursor:pointer;">
           上传表情包图片
-          <input type="file" id="sticker-file" accept="image/*" multiple style="display:none">
+          <input type="file" id="sticker-file" accept="image/*" multiple class="file-hidden">
         </label>
         <div class="sticker-grid" id="sticker-grid"></div>
       </div>
@@ -1036,7 +1041,7 @@
             <div class="avatar" id="set-avatar">梦</div>
             <label class="avatar-upload">
               📷 上传
-              <input type="file" id="avatar-file" accept="image/*" style="display:none">
+              <input type="file" id="avatar-file" accept="image/*" class="file-hidden">
             </label>
           </div>
         </div>
@@ -1046,7 +1051,7 @@
             <div class="avatar" id="set-myavatar">我</div>
             <label class="avatar-upload">
               📷 上传
-              <input type="file" id="myavatar-file" accept="image/*" style="display:none">
+              <input type="file" id="myavatar-file" accept="image/*" class="file-hidden">
             </label>
           </div>
         </div>
@@ -1063,7 +1068,7 @@
             <div class="wallpaper-thumb" id="set-desktop-bg"></div>
             <label class="avatar-upload">
               上传
-              <input type="file" id="desktop-bg-file2" accept="image/*" style="display:none">
+              <input type="file" id="desktop-bg-file2" accept="image/*" class="file-hidden">
             </label>
             <button class="btn secondary small" onclick="resetDesktopBgFromSettings()">恢复默认</button>
           </div>
@@ -1074,20 +1079,9 @@
             <div class="wallpaper-thumb" id="set-him-moments-bg"></div>
             <label class="avatar-upload">
               上传
-              <input type="file" id="him-moments-bg-file" accept="image/*" style="display:none">
+              <input type="file" id="him-moments-bg-file" accept="image/*" class="file-hidden">
             </label>
             <button class="btn secondary small" onclick="clearHimMomentsBg()">恢复默认</button>
-          </div>
-        </div>
-        <div class="setting-row">
-          <label>来电背景图</label>
-          <div class="avatar-preview">
-            <div class="wallpaper-thumb" id="set-call-bg"></div>
-            <label class="avatar-upload">
-              上传
-              <input type="file" id="call-bg-file" accept="image/*" style="display:none">
-            </label>
-            <button class="btn secondary small" onclick="clearCallBg()">恢复默认</button>
           </div>
         </div>
         <div class="setting-row">
@@ -1145,21 +1139,17 @@
           <input type="checkbox" id="set-auto-moments" onchange="setAutoMoments(this.checked)">
         </div>
         <div class="setting-row" style="border-bottom:none;">
-          <div class="setting-desc">「对方主动发消息」按间隔从字卡库抽卡发来消息；「主动来电」「主动发朋友圈」会不定时触发。你自己发朋友圈后，梦角一定会回复，不受开关影响。<br>后台通知：开启后，应用在后台被系统挂起时会在你返回时补发提醒；点「发送测试」可立即看到应用内弹窗和角标效果。</div>
+          <div class="setting-desc">「对方主动发消息」只有在你一段时间没有发消息时，才会按间隔从字卡库抽卡发来消息；「主动来电」「主动发朋友圈」会不定时触发。你自己发朋友圈后，梦角一定会回复，不受开关影响。<br>后台通知：开启后，应用在后台被系统挂起时会在你返回时补发提醒；点「发送测试」可立即看到应用内弹窗和角标效果。</div>
         </div>
       </div>
 
       <div class="setting-group">
-        <div class="setting-row">
-          <label>回复来源</label>
-          <select id="set-draw-cat" onchange="STORE.settings.drawCategory=this.value;saveData()"></select>
-        </div>
         <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
           <label style="flex:none;">字卡回复</label>
           <div style="display:flex;gap:8px;width:100%;">
-            <button class="btn secondary small" onclick="testDrawCard()">🎲 随机抽一张</button>
+            <button class="btn secondary small" onclick="testDrawCard()">随机抽一张</button>
           </div>
-          <div class="setting-desc">聊天时梦角会从选定分类中随机抽取一张字卡作为回复</div>
+          <div class="setting-desc">聊天时梦角会从字卡库中随机抽取一张字卡作为回复</div>
         </div>
       </div>
 
@@ -1214,7 +1204,7 @@
 
 <!-- Call Modal -->
 <div class="modal-overlay" id="call-modal">
-  <div class="modal call-panel call-panel-full" style="text-align:center;">
+  <div class="modal call-panel" style="text-align:center;">
     <button class="call-min-btn" onclick="minimizeCall()">小化</button>
     <div class="avatar" id="call-avatar">梦</div>
     <div id="call-name">梦角</div>
@@ -1243,7 +1233,7 @@
     <div style="margin-bottom:12px;">
       <label class="avatar-upload" style="display:inline-flex;">
         📷 选择图片
-        <input type="file" id="bg-file" accept="image/*" style="display:none">
+        <input type="file" id="bg-file" accept="image/*" class="file-hidden">
       </label>
     </div>
     <div class="modal-actions">
@@ -1260,7 +1250,7 @@
     <div style="margin-bottom:12px;">
       <label class="avatar-upload" style="display:inline-flex;">
         📷 选择图片
-        <input type="file" id="moments-bg-file" accept="image/*" style="display:none">
+        <input type="file" id="moments-bg-file" accept="image/*" class="file-hidden">
       </label>
     </div>
     <div class="modal-actions">
@@ -1277,7 +1267,7 @@
     <div style="margin-bottom:12px;">
       <label class="avatar-upload" style="display:inline-flex;">
         📷 选择图片
-        <input type="file" id="desktop-bg-file" accept="image/*" style="display:none">
+        <input type="file" id="desktop-bg-file" accept="image/*" class="file-hidden">
       </label>
     </div>
     <div class="modal-actions">
@@ -1294,7 +1284,7 @@
     <div style="margin-bottom:12px;">
       <label class="avatar-upload" style="display:inline-flex;">
         选择图片
-        <input type="file" id="photo-widget-file" accept="image/*" style="display:none">
+        <input type="file" id="photo-widget-file" accept="image/*" class="file-hidden">
       </label>
     </div>
     <div class="modal-actions">
@@ -1317,7 +1307,7 @@
     <div class="bg-edit-row">
       <label class="avatar-upload" style="display:inline-flex;">
         背景图
-        <input type="file" id="cd-bg-file" accept="image/*" style="display:none">
+        <input type="file" id="cd-bg-file" accept="image/*" class="file-hidden">
       </label>
       <button class="btn secondary small" onclick="clearCountdownBg()">移除背景</button>
     </div>
@@ -1335,11 +1325,11 @@
     <div class="pair-edit-row">
       <label class="avatar-upload" style="display:inline-flex;">
         梦角头像（左）
-        <input type="file" id="pair-file-left" accept="image/*" style="display:none">
+        <input type="file" id="pair-file-left" accept="image/*" class="file-hidden">
       </label>
       <label class="avatar-upload" style="display:inline-flex;">
         我的头像（右）
-        <input type="file" id="pair-file-right" accept="image/*" style="display:none">
+        <input type="file" id="pair-file-right" accept="image/*" class="file-hidden">
       </label>
     </div>
     <div class="input-row" style="margin:14px 0;">
@@ -1348,7 +1338,7 @@
     <div class="bg-edit-row">
       <label class="avatar-upload" style="display:inline-flex;">
         卡片背景图
-        <input type="file" id="pair-bg-file" accept="image/*" style="display:none">
+        <input type="file" id="pair-bg-file" accept="image/*" class="file-hidden">
       </label>
       <button class="btn secondary small" onclick="clearPairBg()">移除背景</button>
     </div>
@@ -1380,7 +1370,6 @@ const STORE = {
     momentsBg: '',
     himMomentsBg: '',
     desktopBg: '',
-    callBg: '',
     photoWidget: '',
     countdownTitle: '倒数日',
     countdownDate: '',
@@ -1429,14 +1418,24 @@ function loadData() {
   } catch(e) { console.error(e); }
 }
 
-function saveData() {
+let saveTimer = null;
+let saveWarned = false;
+function flushSave() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try {
     localStorage.setItem('zika_data', JSON.stringify(STORE));
   } catch (e) {
     console.error(e);
-    if (typeof toast === 'function') toast('存储空间不足，请换更小的图片');
+    if (!saveWarned && typeof toast === 'function') { saveWarned = true; toast('存储空间不足，请换更小的图片'); }
   }
 }
+function saveData() {
+  // 合并短时间内的多次写入，避免大图数据反复序列化导致点击卡顿
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 150);
+}
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 
 // ============ Theme ============
 function applyTheme() {
@@ -1536,6 +1535,7 @@ function catchUpAutoMsg() {
   if (!STORE.settings.autoMsg) return;
   if (!STORE.cards.length && !STORE.stickers.length) return;
   const step = (Number(STORE.settings.autoInterval) || 5) * 60000;
+  if (Date.now() - lastUserAt < step) return;
   let missed = Math.floor((Date.now() - lastAutoAt) / step);
   if (missed < 1) return;
   missed = Math.min(missed, 3);
@@ -1562,6 +1562,8 @@ document.addEventListener('visibilitychange', () => {
     pendingBgPopup = null;
   }
   catchUpAutoMsg();
+  // 等图片选择器等系统界面关闭后，强制刷新一次页面显示
+  setTimeout(refreshUI, 120);
 });
 
 function showMsgPopup(name, text) {
@@ -1593,13 +1595,17 @@ function onIncomingMessage(text) {
 }
 
 let lastAutoAt = Date.now();
+let lastUserAt = Date.now();
 let lastAutoCallAt = Date.now();
 let lastAutoMomentAt = Date.now();
 
 function autoMsgTick() {
   if (!STORE.settings.autoMsg) return;
   const mins = Number(STORE.settings.autoInterval) || 5;
-  if (Date.now() - lastAutoAt < mins * 60000) return;
+  const gap = mins * 60000;
+  // 只有用户这段时间没有发消息时，才主动发消息
+  if (Date.now() - lastUserAt < gap) return;
+  if (Date.now() - lastAutoAt < gap) return;
   if (!STORE.cards.length && !STORE.stickers.length) return;
   const msg = makeHimReply();
   if (!msg) return;
@@ -2004,20 +2010,27 @@ document.getElementById('cd-bg-file').addEventListener('change', async (e) => {
 // 图片统一压缩导入：避免大图读取卡顿和 localStorage 超限
 function importImage(file, maxSize = 900, format = 'image/jpeg', quality = 0.82) {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type || !file.type.startsWith('image/')) {
+    const nameOk = /\.(jpg|jpeg|png|webp|gif|heic|heif|bmp)$/i.test(file && file.name || '');
+    const isImage = file && ((file.type && file.type.startsWith('image/')) || nameOk);
+    if (!isImage) {
       reject(new Error('not an image'));
       return;
     }
     // 大图解码需要时间，先给用户一个即时反馈，避免“点了没反应”
     if (file.size > 500 * 1024) toast('正在处理图片…');
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
+    let settled = false;
+    let timer = null;
+    const finish = (err, data) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (err) reject(err); else resolve(data);
+    };
+    const draw = (img) => {
       try {
-        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
-        const w = Math.max(1, Math.round(img.naturalWidth * scale));
-        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+        const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
@@ -2027,18 +2040,34 @@ function importImage(file, maxSize = 900, format = 'image/jpeg', quality = 0.82)
           ctx.fillRect(0, 0, w, h);
         }
         ctx.drawImage(img, 0, 0, w, h);
-        URL.revokeObjectURL(objectUrl);
-        resolve(canvas.toDataURL(format, quality));
-      } catch (err) {
-        URL.revokeObjectURL(objectUrl);
-        reject(err);
-      }
+        finish(null, canvas.toDataURL(format, quality));
+      } catch (err) { finish(err); }
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error('decode failed'));
+    const readByFileReader = () => {
+      try {
+        const fr = new FileReader();
+        fr.onload = () => decode(fr.result, false);
+        fr.onerror = () => finish(new Error('read failed'));
+        fr.readAsDataURL(file);
+      } catch (err) { finish(err); }
     };
-    img.src = objectUrl;
+    const decode = (src, revoke) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        if (revoke) URL.revokeObjectURL(src);
+        draw(img);
+      };
+      img.onerror = () => {
+        if (revoke) URL.revokeObjectURL(src);
+        // 个别系统上 objectURL 解码失败时，退回到 FileReader 再试一次
+        if (revoke) readByFileReader();
+        else finish(new Error('decode failed'));
+      };
+      img.src = src;
+    };
+    timer = setTimeout(() => finish(new Error('timeout')), 30000);
+    try { decode(URL.createObjectURL(file), true); } catch (err) { readByFileReader(); }
   });
 }
 
@@ -2137,11 +2166,29 @@ function scrollChatBottom() {
   setTimeout(() => body.scrollTop = body.scrollHeight, 50);
 }
 
+// 从相册/文件选择器或后台返回时，强制重绘并重新应用所有自定义内容
+function refreshUI() {
+  applyTheme();
+  applyUiWeight();
+  applyDesktopBg();
+  applyIconOpacity();
+  updateDesktopWidgets();
+  applyPairBg();
+  applyCountdownBg();
+  applyChatBg();
+  applyMomentsBg();
+  updateHeader();
+  const active = document.querySelector('.page.active');
+  if (active && active.id === 'settings-page') renderSettings();
+  if (active && active.id === 'chat-page') renderChat();
+}
+
 function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
   STORE.chats.push({ from: 'me', text, card: false, time: Date.now() });
+  lastUserAt = Date.now();
   input.value = '';
   renderChat();
   saveData();
@@ -2160,11 +2207,7 @@ function sendMessage() {
 }
 
 function drawCard() {
-  let pool = STORE.cards;
-  const cat = STORE.settings.drawCategory;
-  if (cat && cat !== '全部') {
-    pool = STORE.cards.filter(c => c.category === cat);
-  }
+  const pool = STORE.cards;
   if (pool.length === 0) return null;
   const card = pool[Math.floor(Math.random() * pool.length)];
   return card.text;
@@ -2520,35 +2563,6 @@ document.getElementById('him-moments-bg-file').addEventListener('change', async 
     saveData();
     applyMomentsBg();
     toast('对方朋友圈背景已设置');
-  } catch (err) {
-    toast('图片导入失败，请换一张再试');
-  }
-  e.target.value = '';
-});
-
-// ============ Call Background ============
-function applyCallBg() {
-  const panel = document.getElementById('call-modal');
-  if (panel) panel.style.backgroundImage = STORE.settings.callBg ? `url(${STORE.settings.callBg})` : '';
-  const thumb = document.getElementById('set-call-bg');
-  if (thumb) thumb.style.backgroundImage = STORE.settings.callBg ? `url(${STORE.settings.callBg})` : '';
-}
-
-function clearCallBg() {
-  STORE.settings.callBg = '';
-  saveData();
-  applyCallBg();
-  toast('来电背景已恢复默认');
-}
-
-document.getElementById('call-bg-file').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    STORE.settings.callBg = await importImage(file, 1000);
-    saveData();
-    applyCallBg();
-    toast('来电背景已设置');
   } catch (err) {
     toast('图片导入失败，请换一张再试');
   }
@@ -2973,12 +2987,6 @@ function renderSettings() {
   document.getElementById('set-auto-moments').checked = !!STORE.settings.autoMoments;
   document.getElementById('set-bg-notify').checked = !!STORE.settings.bgNotify;
   document.getElementById('set-popup-notify').checked = !!STORE.settings.popupNotify;
-  // populate draw category select
-  const drawSel = document.getElementById('set-draw-cat');
-  const drawOpts = ['全部', ...STORE.categories].map(c =>
-    `<option value="${escapeHtml(c)}" ${STORE.settings.drawCategory === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
-  ).join('');
-  drawSel.innerHTML = drawOpts;
   const avatar = document.getElementById('set-avatar');
   if (STORE.settings.avatar) {
     avatar.innerHTML = `<img src="${STORE.settings.avatar}">`;
@@ -2993,7 +3001,6 @@ function renderSettings() {
   }
   updateHeader();
   applyMomentsBg();
-  applyCallBg();
 }
 
 function updateHeader() {
@@ -3084,7 +3091,7 @@ function clearAll() {
     localStorage.removeItem('zika_data');
     STORE.cards = []; STORE.categories = ['默认']; STORE.currentCategory = '全部';
     STORE.chats = []; STORE.moments = []; STORE.himMoments = []; STORE.stickers = []; selectedIndices.clear();
-    STORE.settings = { name: '梦角', myname: '我', signature: '', himSignature: '', avatar: '', myavatar: '', chatBg: '', momentsBg: '', himMomentsBg: '', desktopBg: '', callBg: '', photoWidget: '', countdownTitle: '倒数日', countdownDate: '', pairLeft: '', pairRight: '', pairText: 'with you forever', pairBg: '', countdownBg: '', status: '字卡待命', theme: '#6CB4EE', accent: '#6CB4EE', uiWeight: 400, iconOpacity: 100, autoMsg: false, autoInterval: 5, autoCall: false, autoMoments: false, bgNotify: false, popupNotify: false, chatSeen: 0, drawCategory: '全部' };
+    STORE.settings = { name: '梦角', myname: '我', signature: '', himSignature: '', avatar: '', myavatar: '', chatBg: '', momentsBg: '', himMomentsBg: '', desktopBg: '', photoWidget: '', countdownTitle: '倒数日', countdownDate: '', pairLeft: '', pairRight: '', pairText: 'with you forever', pairBg: '', countdownBg: '', status: '字卡待命', theme: '#6CB4EE', accent: '#6CB4EE', uiWeight: 400, iconOpacity: 100, autoMsg: false, autoInterval: 5, autoCall: false, autoMoments: false, bgNotify: false, popupNotify: false, chatSeen: 0, drawCategory: '全部' };
     saveData(); applyTheme(); applyUiWeight(); updateHeader(); renderCards(); renderChat(); renderMoments(); applyMomentsBg(); applyDesktopBg(); applyIconOpacity(); updateDesktopWidgets();
     toast('已重置');
   }
@@ -3129,7 +3136,6 @@ applyDesktopBg();
 updateDesktopBadges();
 updateDesktopWidgets();
 applyIconOpacity();
-applyCallBg();
 
 // 软键盘适配：用 visualViewport 计算键盘高度，压缩聊天页高度让输入栏贴住键盘
 let lastKbHeight = 0;
