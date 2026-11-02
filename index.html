@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
 <title>梦</title>
 <meta name="application-name" content="梦">
 <meta name="apple-mobile-web-app-title" content="梦">
@@ -33,19 +33,16 @@
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
     height: 100dvh;
-    height: calc(var(--vh, 1vh) * 100);
     overflow: hidden;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
   }
   .app {
     width: 100%;
     max-width: 480px;
-    height: 100vh;
     height: 100dvh;
-    height: calc(var(--vh, 1vh) * 100);
     background: var(--bg);
     font-weight: var(--ui-weight);
     display: flex;
@@ -269,7 +266,8 @@
     color: var(--primary); font-size: 20px; display: flex; align-items: center;
   }
   .header-btn svg { width: 20px; height: 20px; }
-  .char-info { display: flex; align-items: center; gap: 10px; }
+  .char-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .char-info > div { flex-shrink: 0; min-width: 0; }
   .avatar {
     width: 38px; height: 38px; border-radius: 50%;
     background: var(--bg2);
@@ -278,19 +276,24 @@
     flex-shrink: 0; overflow: hidden;
   }
   .avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .char-name { font-size: 15px; font-weight: var(--ui-weight-strong); }
-  .char-status { font-size: 11px; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
-  .char-status .dot { width: 6px; height: 6px; border-radius: 50%; background: #34c759; }
-  .chat-header { justify-content: space-between; background: rgba(255,255,255,0.65); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid rgba(229,229,234,0.6); }
-  .char-info-centered { flex: 1; justify-content: center; }
+  .char-name { font-size: 15px; font-weight: var(--ui-weight-strong); white-space: nowrap; }
+  .chat-header { justify-content: space-between; background: rgba(255,255,255,0.65); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid rgba(229,229,234,0.6); transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .char-info-centered { flex: 1; justify-content: center; min-width: 0; padding: 0 6px; overflow: hidden; }
 
   /* ============ Chat ============ */
-  #chat-page { background: #ffffff; background-size: cover; background-position: center; position: relative; }
+  #chat-page {
+    background: #ffffff; background-size: cover; background-position: center; position: relative;
+    padding-bottom: var(--kb, 0px); isolation: isolate;
+  }
   .chat-body {
     flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 22px;
-    scroll-behavior: smooth; background: transparent;
+    scroll-behavior: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    contain: layout paint;
+    background: transparent;
   }
+  body.kb-open .msg { animation: none; }
   .chat-body::-webkit-scrollbar { width: 0; }
   .chat-empty {
     flex: 1; display: flex; flex-direction: column;
@@ -344,14 +347,6 @@
     color: var(--text);
   }
   .msg-time { font-size: 11px; color: var(--text-light); text-align: center; margin: 6px 0; }
-  .typing { display: flex; gap: 4px; padding: 4px 2px; }
-  .typing span {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--text-light);
-    animation: blink 1.2s infinite;
-  }
-  .typing span:nth-child(2) { animation-delay: 0.2s; }
-  .typing span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes blink { 0%,60%,100% { opacity: 0.3; } 30% { opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
   .chat-input {
@@ -360,8 +355,14 @@
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-top: 1px solid rgba(229,229,234,0.6);
     display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+    transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden;
   }
-  body.kb-open .chat-input { padding-bottom: 10px; }
+  body.kb-open .chat-input, body.typing .chat-input { padding-bottom: 10px; }
+  /* 键盘伸缩动画期间关闭毛玻璃，避免 WebView 合成层残留重影 */
+  body.kb-moving .chat-header, body.kb-moving .chat-input {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    background: rgba(255,255,255,0.97);
+  }
   .plus-menu {
     display: none; background: rgba(255,255,255,0.85);
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -402,7 +403,8 @@
   .plus-label { font-size: 12px; color: var(--text); }
 
   .sticker-panel {
-    position: absolute; left: 0; right: 0; bottom: calc(60px + env(safe-area-inset-bottom));
+    position: absolute; left: 0; right: 0;
+    bottom: calc(var(--kb, 0px) + 60px + env(safe-area-inset-bottom));
     max-height: 210px; overflow-y: auto; z-index: 220;
     background: rgba(255,255,255,0.94);
     backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -522,14 +524,15 @@
 
   /* ============ Back Button ============ */
   .back-btn {
-    display: inline-flex; align-items: center; gap: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; flex-shrink: 0;
     background: rgba(108,180,238,0.12); border: none; cursor: pointer;
-    color: var(--primary); font-size: 12px; font-weight: 500;
-    padding: 6px 11px; border-radius: 14px; flex-shrink: 0;
+    color: var(--primary); font-size: 12px;
+    padding: 0; border-radius: 50%;
     font-family: inherit; transition: background 0.18s ease;
   }
   .back-btn:active { background: rgba(108,180,238,0.24); }
-  .back-btn .chev { font-size: 14px; line-height: 1; }
+  .back-btn .chev { font-size: 17px; line-height: 1; }
 
   @keyframes appOpen {
     from { opacity: 0; transform: scale(0.93); }
@@ -862,12 +865,11 @@
   <!-- ============ CHAT PAGE ============ -->
   <div class="page" id="chat-page">
     <div class="header chat-header">
-      <button class="back-btn" onclick="goHome()"><span class="chev">‹</span>桌面</button>
+      <button class="back-btn" onclick="goHome()"><span class="chev">‹</span></button>
       <div class="char-info char-info-centered">
         <div class="avatar" id="header-avatar">梦</div>
         <div>
           <div class="char-name" id="header-name">梦角</div>
-          <div class="char-status"><span class="dot"></span><span id="header-status">字卡待命</span></div>
         </div>
       </div>
       <button class="header-btn" onclick="openBgModal()" title="聊天背景">
@@ -899,7 +901,7 @@
   <div class="page" id="cards-page">
     <div class="header">
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span>桌面</button>
+        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span></button>
         <h1>字卡库</h1>
       </div>
       <div style="font-size:12px;color:var(--text-light);">共 <span id="card-count">0</span> 张</div>
@@ -960,7 +962,7 @@
   <div class="page" id="moments-page">
     <div class="header">
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span>桌面</button>
+        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span></button>
         <h1>朋友圈</h1>
       </div>
       <div style="display:flex;gap:4px;">
@@ -1002,7 +1004,7 @@
   <div class="page" id="settings-page">
     <div class="header">
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span>桌面</button>
+        <button class="back-btn" onclick="goHome()"><span class="chev">‹</span></button>
         <h1>设置</h1>
       </div>
     </div>
@@ -1575,6 +1577,7 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(page + '-page').classList.add('active');
   document.querySelector('.app').classList.toggle('on-desktop', page === 'desktop');
+  syncViewportHeight();
   if (page === 'desktop') { updateDesktopBadges(); updateDesktopWidgets(); }
   if (page === 'cards') renderCards();
   if (page === 'moments') renderMoments();
@@ -2012,28 +2015,10 @@ function sendMessage() {
   renderChat();
   saveData();
 
-  // typing indicator
-  const body = document.getElementById('chat-body');
-  const typing = document.createElement('div');
-  typing.className = 'msg him';
-  typing.id = 'typing-indicator';
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar-sm';
-  if (STORE.settings.avatar) {
-    avatar.innerHTML = `<img src="${STORE.settings.avatar}">`;
-  } else {
-    avatar.textContent = STORE.settings.name.charAt(0);
-  }
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-  bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-  typing.appendChild(avatar);
-  typing.appendChild(bubble);
-  body.appendChild(typing);
+  // 已移除等待小点，只保留回复延时
   scrollChatBottom();
 
   setTimeout(() => {
-    document.getElementById('typing-indicator')?.remove();
     const reply = makeHimReply();
     if (reply) {
       STORE.chats.push(reply);
@@ -2113,8 +2098,16 @@ function sendSticker(i) {
   document.getElementById('sticker-panel').classList.remove('show');
 }
 
+  document.getElementById('chat-input').addEventListener('input', () => {
+    syncViewportHeight();
+  });
   document.getElementById('chat-input').addEventListener('focus', () => {
-    setTimeout(scrollChatBottom, 350);
+    document.body.classList.add('typing');
+    setTimeout(() => { syncViewportHeight(); scrollChatBottom(); }, 300);
+  });
+  document.getElementById('chat-input').addEventListener('blur', () => {
+    document.body.classList.remove('typing');
+    setTimeout(syncViewportHeight, 100);
   });
   document.getElementById('chat-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -2881,7 +2874,7 @@ function renderSettings() {
 
 function updateHeader() {
   document.getElementById('header-name').textContent = STORE.settings.name;
-  document.getElementById('header-status').textContent = STORE.settings.status;
+
   const hAvatar = document.getElementById('header-avatar');
   if (STORE.settings.avatar) {
     hAvatar.innerHTML = `<img src="${STORE.settings.avatar}">`;
@@ -3012,18 +3005,32 @@ updateDesktopWidgets();
 applyIconOpacity();
 applyCallBg();
 
-// 适配手机浏览器地址栏和键盘，保证输入框始终可见
+// 软键盘适配：用 visualViewport 计算键盘高度，压缩聊天页高度让输入栏贴住键盘
+let lastKbHeight = 0;
+let kbFrame = 0;
 function syncViewportHeight() {
-  const vv = window.visualViewport;
-  const h = vv ? vv.height : window.innerHeight;
-  document.documentElement.style.setProperty('--vh', (h / 100) + 'px');
-  const kbOpen = !!vv && vv.height < window.innerHeight - 100;
-  document.body.classList.toggle('kb-open', kbOpen);
+  if (kbFrame) return;
+  kbFrame = requestAnimationFrame(() => {
+    kbFrame = 0;
+    const vv = window.visualViewport;
+    const rawKb = vv ? Math.max(0, window.innerHeight - vv.height) : 0;
+    const kb = rawKb > 60 ? Math.round(rawKb / 2) * 2 : 0;
+    if (kb === lastKbHeight) return;
+    lastKbHeight = kb;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kb-open', kb > 0);
+    document.body.classList.add('kb-moving');
+    clearTimeout(syncViewportHeight._settle);
+    syncViewportHeight._settle = setTimeout(() => document.body.classList.remove('kb-moving'), 260);
+  });
 }
 syncViewportHeight();
 window.addEventListener('resize', syncViewportHeight);
 window.addEventListener('orientationchange', syncViewportHeight);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', syncViewportHeight);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncViewportHeight);
+  window.visualViewport.addEventListener('scroll', syncViewportHeight);
+}
 
 // 开屏动画
 setTimeout(() => {
